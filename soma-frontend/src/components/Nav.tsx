@@ -15,6 +15,7 @@ export default function Nav({ goTo, user, onLogout }: NavProps) {
 
       <ul style={S.links}>
         <li><button style={S.link} onClick={() => goTo("courses")}>강의</button></li>
+        {user && <li><button style={S.link} onClick={() => goTo("my")}>내 수업</button></li>}
         <li><button style={S.link} onClick={() => goTo("home")}>강사</button></li>
         <li><button style={S.link} onClick={() => goTo("home")}>후기</button></li>
         {!user ? (

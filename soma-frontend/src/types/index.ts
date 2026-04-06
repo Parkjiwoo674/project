@@ -85,4 +85,4 @@ export interface PaginatedResponse<T> {
 }
 
 // ── 페이지 라우터용 ────────────────────────────────────────────
-export type PageKey = "home" | "courses" | "auth" | "detail";
+export type PageKey = "home" | "courses" | "auth" | "detail" | "my" | "player";

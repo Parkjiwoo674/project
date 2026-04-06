@@ -6,6 +6,8 @@ import Landing       from "@/pages/Landing";
 import CourseList    from "@/pages/CourseList";
 import Auth          from "@/pages/Auth";
 import CourseDetail  from "@/pages/CourseDetail";
+import MyPage        from "@/pages/MyPage";
+import Player        from "@/pages/Player";
 
 const GLOBAL_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&family=Noto+Serif+KR:wght@300;400&display=swap');
@@ -39,12 +41,14 @@ export default function App() {
   return (
     <>
       <style>{GLOBAL_CSS}</style>
-      <Nav goTo={goTo} user={auth.user} onLogout={handleLogout} />
+      {page !== "player" && <Nav goTo={goTo} user={auth.user} onLogout={handleLogout} />}
 
       {page === "home"    && <Landing     goTo={goTo} />}
       {page === "courses" && <CourseList  goTo={goTo} />}
       {page === "auth"    && <Auth        goTo={goTo} auth={auth} />}
       {page === "detail"  && <CourseDetail goTo={goTo} courseId={courseId} loggedIn={!!auth.user} />}
+      {page === "my"      && <MyPage      goTo={goTo} />}
+      {page === "player"  && <Player      goTo={goTo} courseId={courseId} />}
     </>
   );
 }

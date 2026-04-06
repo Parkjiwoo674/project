@@ -7,6 +7,15 @@ export function useAuth() {
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
 
+  // 앱 시작 시 토큰으로 유저 복원
+  useState(() => {
+    const token = localStorage.getItem("soma_token");
+    if (!token) return;
+    authApi.me().then((res) => {
+      if (res.data) setUser(res.data);
+    }).catch(() => localStorage.removeItem("soma_token"));
+  });
+
   const login = useCallback(async (email: string, password: string) => {
     setLoading(true); setError(null);
     try {
