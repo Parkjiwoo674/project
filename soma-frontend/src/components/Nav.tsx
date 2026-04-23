@@ -14,17 +14,25 @@ export default function Nav({ goTo, user, onLogout }: NavProps) {
       </span>
 
       <ul style={S.links}>
-        <li><button style={S.link} onClick={() => goTo("courses")}>강의</button></li>
-        {user && <li><button style={S.link} onClick={() => goTo("my")}>내 수업</button></li>}
-        <li><button style={S.link} onClick={() => goTo("home")}>강사</button></li>
-        <li><button style={S.link} onClick={() => goTo("home")}>후기</button></li>
+        {user?.role !== "instructor" && <li><button style={S.link} onClick={() => goTo("courses")}>강의</button></li>}
+        {user?.role === "instructor" && <li><button style={S.link} onClick={() => goTo("instructor")}>내 강의 관리</button></li>}
+        {user?.role === "user" && <li><button style={S.link} onClick={() => goTo("my")}>내 수업</button></li>}
+        {user?.role === "user" && <li><button style={S.link} onClick={() => goTo("wishlist")}>찜 목록</button></li>}
+        {!user && <li><button style={S.link} onClick={() => goTo("courses")}>강의</button></li>}
         {!user ? (
           <li>
             <button style={S.cta} onClick={() => goTo("auth")}>로그인 / 가입</button>
           </li>
         ) : (
           <li style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 13, color: "var(--mid)" }}>{user.nickname}님</span>
+            <span style={{ fontSize: 13, color: "var(--mid)", cursor: "pointer" }}
+              onClick={() => user.role === "instructor" ? goTo("instructor-profile") : undefined}>
+              {user.nickname}님
+            </span>
+            {user.role === "instructor" && (
+              <span style={{ fontSize: 10, background: "var(--terra)", color: "white", padding: "2px 8px", borderRadius: 100, fontWeight: 500, cursor: "pointer" }}
+                onClick={() => goTo("instructor-profile")}>강사</span>
+            )}
             <button style={S.avatar} onClick={onLogout} title="로그아웃">🌿</button>
           </li>
         )}

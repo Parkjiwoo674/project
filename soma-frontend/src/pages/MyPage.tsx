@@ -7,7 +7,7 @@ interface MyPageProps {
   goTo: (page: PageKey, id?: number) => void;
 }
 
-const EMOJIS = ["🧘‍♀️", "🏋️‍♀️", "🌿", "🌅", "🧘‍♂️", "💧"];
+const EMOJIS: (string | null)[] = [null, "🏋️‍♀️", "🌿", "🌅", "🧘‍♂️", "💧"];
 const GRADS  = [
   "linear-gradient(135deg,#D4E8D4,#A8C8A0)",
   "linear-gradient(135deg,#E8D4C4,#D4A88A)",
@@ -28,6 +28,16 @@ export default function MyPage({ goTo }: MyPageProps) {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleCancel = async (courseId: number, title: string) => {
+    if (!window.confirm(`"${title}" 수강을 취소할까요?\n진도 데이터도 함께 삭제됩니다.`)) return;
+    try {
+      await enrollmentApi.cancel(courseId);
+      setEnrollments((prev) => prev.filter((e) => e.course_id !== courseId));
+    } catch (e) {
+      alert((e as Error).message);
+    }
+  };
+
   return (
     <div style={{ paddingTop: 80, minHeight: "100vh" }}>
       {/* Hero */}
@@ -45,7 +55,6 @@ export default function MyPage({ goTo }: MyPageProps) {
           <div style={S.empty}>불러오는 중...</div>
         ) : enrollments.length === 0 ? (
           <div style={S.emptyBox}>
-            <div style={{ fontSize: 56, marginBottom: 16 }}>🧘‍♀️</div>
             <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 300, marginBottom: 10 }}>
               아직 수강 중인 강의가 없어요
             </div>
@@ -60,10 +69,13 @@ export default function MyPage({ goTo }: MyPageProps) {
               <div key={e.enrollment_id} style={S.card}>
                 {/* 썸네일 */}
                 <div
-                  style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 56, background: GRADS[i % 6], cursor: "pointer" }}
+                  style={{ height: 160, background: GRADS[i % 6], cursor: "pointer", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 56 }}
                   onClick={() => goTo("player", e.course_id)}
                 >
-                  {EMOJIS[i % 6]}
+                  {e.thumbnail_url
+                    ? <img src={e.thumbnail_url} alt={e.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    : <span>🧘</span>
+                  }
                 </div>
 
                 <div style={{ padding: "18px 18px 20px" }}>
@@ -90,6 +102,9 @@ export default function MyPage({ goTo }: MyPageProps) {
                   <button style={S.playBtn} onClick={() => goTo("player", e.course_id)}>
                     {e.progress_rate === 0 ? "▶ 학습 시작" : e.progress_rate === 100 ? "✅ 완료" : "▶ 이어서 듣기"}
                   </button>
+                  <button style={S.cancelBtn} onClick={() => handleCancel(e.course_id, e.title)}>
+                    수강 취소
+                  </button>
                 </div>
               </div>
             ))}
@@ -110,5 +125,6 @@ const S: Record<string, React.CSSProperties> = {
   emptyBox:{ textAlign: "center", padding: "80px 0", color: "var(--mid)" },
   btn:     { padding: "12px 28px", background: "var(--dark)", color: "var(--cream)", border: "none", borderRadius: 100, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" },
   card:    { background: "white", borderRadius: 18, overflow: "hidden", border: "1px solid rgba(212,196,168,0.4)" },
-  playBtn: { display: "block", width: "100%", padding: "11px 0", background: "var(--terra)", color: "white", border: "none", borderRadius: 100, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" },
+  playBtn: { display: "block", width: "100%", padding: "11px 0", background: "var(--terra)", color: "white", border: "none", borderRadius: 100, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", marginBottom: 8 },
+  cancelBtn: { display: "block", width: "100%", padding: "9px 0", background: "none", color: "var(--mid)", border: "1px solid var(--sand)", borderRadius: 100, fontSize: 12, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" },
 };

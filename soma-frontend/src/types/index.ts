@@ -4,6 +4,7 @@ export interface User {
   name:     string;
   nickname: string;
   email:    string;
+  role?:    "user" | "instructor" | "admin";
 }
 
 // ── 강의 ──────────────────────────────────────────────────────
@@ -33,21 +34,52 @@ export interface Lecture {
   title:        string;
   duration_sec: number;
   is_preview:   0 | 1;
+  video_url?:   string | null;
 }
 
 export interface Review {
-  id:                 number;
-  reviewer_nickname:  string;
-  rating:             number;
-  content:            string;
-  created_at:         string;
+  id:                number;
+  reviewer_nickname: string;
+  rating:            number;
+  content:           string;
+  created_at:        string;
+}
+
+export interface QnaAnswer {
+  id:               number;
+  content:          string;
+  created_at:       string;
+  author_nickname:  string;
+  role:             string;
+}
+
+export interface QnaQuestion {
+  id:               number;
+  content:          string;
+  created_at:       string;
+  author_nickname:  string;
+  user_id:          number;
+  answer_count:     number;
+  answers:          QnaAnswer[];
+}
+
+export interface Instructor {
+  id:             number;
+  name:           string;
+  bio:            string;
+  avatar_url:     string | null;
+  certifications: string | null;
+  course_count:   number;
+  student_count:  number;
+  avg_rating:     number | null;
 }
 
 export interface CourseDetail extends Course {
+  instructor_id?:    number;
   instructor_bio:    string;
   instructor_avatar: string | null;
   review_count:      number;
-  curriculum:        Record<number, Lecture[]>; // { 1: [...], 2: [...] }
+  curriculum:        Record<number, Lecture[]>;
   reviews:           Review[];
   isEnrolled:        boolean;
   isWishlisted:      boolean;
@@ -64,12 +96,13 @@ export interface Enrollment {
   completed_lectures: number;
   progress_rate:      number;
   thumbnail_url:      string | null;
+  level:              Level;
 }
 
 // ── API 응답 공통 래퍼 ─────────────────────────────────────────
 export interface ApiResponse<T> {
-  success: boolean;
-  data?:   T;
+  success:  boolean;
+  data?:    T;
   message?: string;
 }
 
@@ -85,4 +118,4 @@ export interface PaginatedResponse<T> {
 }
 
 // ── 페이지 라우터용 ────────────────────────────────────────────
-export type PageKey = "home" | "courses" | "auth" | "detail" | "my" | "player";
+export type PageKey = "home" | "courses" | "auth" | "detail" | "my" | "player" | "wishlist" | "instructor" | "instructor-profile" | "payment" | "payment-success" | "payment-fail";

@@ -10,8 +10,9 @@ interface AuthProps {
 type Tab = "login" | "signup";
 
 export default function Auth({ goTo, auth }: AuthProps) {
-  const [tab, setTab]         = useState<Tab>("login");
-  const [form, setForm]       = useState({ name: "", nickname: "", email: "", password: "" });
+  const [tab, setTab]   = useState<Tab>("login");
+  const [form, setForm] = useState({ name: "", nickname: "", email: "", password: "" });
+  const [role, setRole] = useState<"user" | "instructor">("user");
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [k]: e.target.value }));
@@ -22,7 +23,7 @@ export default function Auth({ goTo, auth }: AuthProps) {
   };
 
   const handleSignup = async () => {
-    const ok = await auth.signup(form.name, form.nickname, form.email, form.password);
+    const ok = await auth.signup(form.name, form.nickname, form.email, form.password, role);
     if (ok) goTo("home");
   };
 
@@ -31,7 +32,9 @@ export default function Auth({ goTo, auth }: AuthProps) {
       {/* Visual Side */}
       <div style={S.visual}>
         <div style={S.visualOverlay} />
-        <div style={{ fontSize: 120, opacity: 0.2, marginBottom: 28, position: "relative", zIndex: 1 }}>🧘‍♀️</div>
+        <div style={{ fontSize: 120, opacity: 0.2, marginBottom: 28, position: "relative", zIndex: 1 }}>
+          <img src="/soma-removebg-preview.png" alt="강사" style={{ width: 120, height: 120, objectFit: "cover", objectPosition: "top", borderRadius: "50%", opacity: 0.6 }} />
+        </div>
         <h2 style={S.visualTitle}>
           당신의 수련이<br />
           <em style={{ fontStyle: "italic", color: "var(--sand)" }}>기다리고 있어요</em>
@@ -72,7 +75,7 @@ export default function Auth({ goTo, auth }: AuthProps) {
           {tab === "login" && (
             <>
               <Field label="이메일" type="email"    value={form.email}    onChange={set("email")} placeholder="email@example.com" />
-              <Field label="비밀번호" type="password" value={form.password} onChange={set("password")} placeholder="••••••••" />
+              <Field label="비밀번호" type="password" value={form.password} onChange={set("password")} placeholder="비밀번호" />
               <button style={S.submit} onClick={handleLogin} disabled={auth.loading}>
                 {auth.loading ? "로그인 중..." : "로그인"}
               </button>
@@ -85,6 +88,17 @@ export default function Auth({ goTo, auth }: AuthProps) {
           {/* Signup Form */}
           {tab === "signup" && (
             <>
+              {/* 역할 선택 */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+                {([["user", "학생", "강의를 수강해요"], ["instructor", "강사", "강의를 만들어요"]] as const).map(([r, label, sub]) => (
+                  <button key={r} onClick={() => setRole(r)}
+                    style={{ padding: "14px 12px", border: `2px solid ${role === r ? "var(--deep)" : "var(--sand)"}`, borderRadius: 14, background: role === r ? "var(--lsage)" : "white", cursor: "pointer", textAlign: "center", transition: "all 0.15s" }}>
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>{label.split(" ")[0]}</div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: role === r ? "var(--deep)" : "var(--dark)" }}>{label.split(" ")[1]}</div>
+                    <div style={{ fontSize: 11, color: "var(--mid)", marginTop: 2 }}>{sub}</div>
+                  </button>
+                ))}
+              </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <Field label="이름"   type="text" value={form.name}     onChange={set("name")}     placeholder="홍길동" />
                 <Field label="닉네임" type="text" value={form.nickname} onChange={set("nickname")} placeholder="요가러버" />
@@ -96,7 +110,7 @@ export default function Auth({ goTo, auth }: AuthProps) {
                 <label style={S.agree}><input type="checkbox" style={{ accentColor: "var(--deep)" }} /> <span>마케팅 정보 수신에 동의합니다 (선택)</span></label>
               </div>
               <button style={S.submit} onClick={handleSignup} disabled={auth.loading}>
-                {auth.loading ? "가입 중..." : "회원가입 완료"}
+                {auth.loading ? "가입 중..." : `${role === "instructor" ? "강사로" : "학생으로"} 가입하기`}
               </button>
               <div style={S.footNote}>
                 이미 계정이 있으신가요? <button style={S.flink} onClick={() => setTab("login")}>로그인</button>

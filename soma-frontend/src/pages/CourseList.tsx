@@ -4,7 +4,7 @@ import { courseApi } from "@/api";
 import Footer from "@/components/Footer";
 
 interface CourseListProps {
-  goTo: (page: PageKey) => void;
+  goTo: (page: PageKey, id?: number) => void;
 }
 
 const TABS = ["전체", "입문", "중급", "심화", "라이브"] as const;
@@ -18,7 +18,7 @@ const thumbGrad: Record<string, string> = {
   t5: "linear-gradient(135deg,#E4D4E8,#C8A8D4)",
   t6: "linear-gradient(135deg,#D4EAE4,#A0C8BE)",
 };
-const EMOJIS = ["🧘‍♀️", "🏋️‍♀️", "🌿", "🌅", "🧘‍♂️", "💧"];
+const EMOJIS: (string | null)[] = [null, "🏋️‍♀️", "🌿", "🌅", "🧘‍♂️", "💧"];
 const THUMBS = ["t1", "t2", "t3", "t4", "t5", "t6"];
 
 const tagStyle = (type: string): React.CSSProperties => {
@@ -32,12 +32,14 @@ const tagStyle = (type: string): React.CSSProperties => {
 export default function CourseList({ goTo }: CourseListProps) {
   const [courses, setCourses]   = useState<Course[]>([]);
   const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("전체");
   const [search, setSearch]     = useState("");
 
   useEffect(() => {
     (async () => {
       setLoading(true);
+      setError(null);
       try {
         const res = await courseApi.list({
           level:   activeTab === "전체" || activeTab === "라이브" ? undefined : activeTab,
@@ -45,8 +47,8 @@ export default function CourseList({ goTo }: CourseListProps) {
           search:  search || undefined,
         });
         setCourses(res.data);
-      } catch {
-        // fallback: 빈 배열
+      } catch (e) {
+        setError((e as Error).message ?? "강의 목록을 불러오지 못했습니다.");
         setCourses([]);
       } finally {
         setLoading(false);
@@ -96,12 +98,21 @@ export default function CourseList({ goTo }: CourseListProps) {
 
         {loading ? (
           <div style={{ textAlign: "center", padding: 80, color: "var(--mid)" }}>불러오는 중...</div>
+        ) : error ? (
+          <div style={{ textAlign: "center", padding: 80, color: "var(--terra)" }}>{error}</div>
+        ) : courses.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 80, color: "var(--mid)" }}>강의가 없습니다.</div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 24 }}>
-            {(courses.length > 0 ? courses : MOCK_COURSES).map((c, i) => (
+            {courses.map((c, i) => (
               <div key={c.id} style={S.card} onClick={() => goTo("detail", c.id)}>
-                <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 62, background: thumbGrad[THUMBS[i % 6]] }}>
-                  {EMOJIS[i % 6]}
+                <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 62, background: thumbGrad[THUMBS[i % 6]], overflow: "hidden" }}>
+                  {c.thumbnail_url
+                    ? <img src={c.thumbnail_url} alt={c.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    : EMOJIS[i % 6]
+                      ? EMOJIS[i % 6]
+                      : <img src="/soma-removebg-preview.png" alt="강사" style={{ height: "100%", width: "100%", objectFit: "cover", objectPosition: "top center" }} />
+                  }
                 </div>
                 <div style={{ padding: "18px 18px 22px" }}>
                   <div style={{ display: "flex", gap: 6, marginBottom: 9 }}>
@@ -129,15 +140,6 @@ export default function CourseList({ goTo }: CourseListProps) {
   );
 }
 
-// API 연동 전 화면 확인용 목업
-const MOCK_COURSES: Course[] = [
-  { id:1, title:"아침을 여는 하타 요가",   level:"입문", duration_weeks:4,  lecture_count:32, total_hours:16, price:89000,  is_live:1, thumbnail_url:null, instructor_name:"김소라", category:"입문", avg_rating:4.9, enrollment_count:3247, description:"" },
-  { id:2, title:"파워 빈야사 플로우",       level:"중급", duration_weeks:8,  lecture_count:56, total_hours:28, price:119000, is_live:0, thumbnail_url:null, instructor_name:"김소라", category:"중급", avg_rating:4.8, enrollment_count:1800, description:"" },
-  { id:3, title:"숙면을 위한 인 요가",      level:"입문", duration_weeks:null,lecture_count:24, total_hours:12, price:69000,  is_live:0, thumbnail_url:null, instructor_name:"이지현", category:"입문", avg_rating:5.0, enrollment_count:2500, description:"" },
-  { id:4, title:"선라이즈 명상 호흡",       level:"입문", duration_weeks:3,  lecture_count:18, total_hours:9,  price:59000,  is_live:0, thumbnail_url:null, instructor_name:"박민지", category:"입문", avg_rating:4.7, enrollment_count:940,  description:"" },
-  { id:5, title:"아쉬탕가 심화 수련",       level:"심화", duration_weeks:10, lecture_count:40, total_hours:20, price:149000, is_live:1, thumbnail_url:null, instructor_name:"김소라", category:"심화", avg_rating:4.9, enrollment_count:620,  description:"" },
-  { id:6, title:"코어 & 밸런스 필라테스",   level:"중급", duration_weeks:6,  lecture_count:36, total_hours:18, price:99000,  is_live:0, thumbnail_url:null, instructor_name:"정수현", category:"중급", avg_rating:4.8, enrollment_count:1100, description:"" },
-];
 
 const S: Record<string, React.CSSProperties> = {
   sLabelLight: { fontSize: 11, letterSpacing: "0.3em", color: "var(--sage)", textTransform: "uppercase", fontWeight: 500, display: "flex", alignItems: "center", gap: 12, marginBottom: 18 },

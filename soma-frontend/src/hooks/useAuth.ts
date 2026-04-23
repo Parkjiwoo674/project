@@ -32,11 +32,11 @@ export function useAuth() {
   }, []);
 
   const signup = useCallback(async (
-    name: string, nickname: string, email: string, password: string
+    name: string, nickname: string, email: string, password: string, role: "user" | "instructor" = "user"
   ) => {
     setLoading(true); setError(null);
     try {
-      const res = await authApi.signup({ name, nickname, email, password });
+      const res = await authApi.signup({ name, nickname, email, password, role });
       localStorage.setItem("soma_token", res.token);
       if (res.user) setUser(res.user);
       return true;
