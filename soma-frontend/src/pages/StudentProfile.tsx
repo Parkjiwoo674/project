@@ -1,33 +1,31 @@
 import { useState, useEffect } from "react";
-import type { PageKey } from "@/types";
-import { instructorCourseApi, uploadApi } from "@/api";
+import type { PageKey, User } from "@/types";
+import { userApi, uploadApi } from "@/api";
 import Footer from "@/components/Footer";
 
 interface Props {
-  goTo: (page: PageKey, id?: number) => void;
-  onUpdate: (updated: { avatar_url?: string; name?: string }) => void;
+  goTo:       (page: PageKey, id?: number) => void;
+  onUpdate:   (updated: Partial<User>) => void;
 }
 
 interface ProfileForm {
-  name:       string;
-  bio:        string;
+  nickname:   string;
   avatar_url: string;
 }
 
-export default function InstructorProfile({ goTo, onUpdate }: Props) {
-  const [form, setForm]         = useState<ProfileForm>({ name: "", bio: "", avatar_url: "" });
-  const [loading, setLoading]   = useState(true);
-  const [saving, setSaving]     = useState(false);
+export default function StudentProfile({ goTo, onUpdate }: Props) {
+  const [form, setForm]           = useState<ProfileForm>({ nickname: "", avatar_url: "" });
+  const [loading, setLoading]     = useState(true);
+  const [saving, setSaving]       = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [saved, setSaved]       = useState(false);
+  const [saved, setSaved]         = useState(false);
 
   useEffect(() => {
-    instructorCourseApi.getProfile()
+    userApi.getProfile()
       .then((res) => {
         if (res.data) {
           setForm({
-            name:       res.data.name ?? "",
-            bio:        res.data.bio ?? "",
+            nickname:   res.data.nickname ?? "",
             avatar_url: res.data.avatar_url ?? "",
           });
         }
@@ -46,11 +44,11 @@ export default function InstructorProfile({ goTo, onUpdate }: Props) {
   };
 
   const handleSave = async () => {
-    if (!form.name.trim()) { alert("이름을 입력해주세요."); return; }
+    if (!form.nickname.trim()) { alert("닉네임을 입력해주세요."); return; }
     setSaving(true);
     try {
-      await instructorCourseApi.updateProfile(form);
-      onUpdate({ avatar_url: form.avatar_url, name: form.name });
+      await userApi.updateProfile(form);
+      onUpdate({ nickname: form.nickname, avatar_url: form.avatar_url });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) { alert((e as Error).message); }
@@ -64,7 +62,7 @@ export default function InstructorProfile({ goTo, onUpdate }: Props) {
   return (
     <div style={{ paddingTop: 80, minHeight: "100vh" }}>
       <div style={{ background: "var(--dark)", padding: "48px 80px 36px" }}>
-        <div style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--terra)", textTransform: "uppercase", fontWeight: 500, marginBottom: 12 }}>강사</div>
+        <div style={{ fontSize: 11, letterSpacing: "0.3em", color: "var(--sage)", textTransform: "uppercase", fontWeight: 500, marginBottom: 12 }}>수강생</div>
         <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "clamp(28px,3vw,40px)", fontWeight: 300, color: "var(--cream)" }}>
           내 <em style={{ fontStyle: "italic", color: "var(--sand)" }}>프로필</em>
         </h1>
@@ -81,7 +79,7 @@ export default function InstructorProfile({ goTo, onUpdate }: Props) {
             }
           </div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>{form.name || "강사명"}</div>
+            <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>{form.nickname || "닉네임"}</div>
             <label style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", border: "1px solid var(--sand)", borderRadius: 100, fontSize: 13, color: "var(--mid)", cursor: "pointer" }}>
               <span>📷</span>
               <span>{uploading ? "업로드 중..." : "사진 변경"}</span>
@@ -97,29 +95,19 @@ export default function InstructorProfile({ goTo, onUpdate }: Props) {
           </div>
         </div>
 
-        {/* 이름 */}
-        <Field label="이름">
+        {/* 닉네임 */}
+        <Field label="닉네임">
           <input
             style={S.input}
-            value={form.name}
-            onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            placeholder="강사 이름"
+            value={form.nickname}
+            onChange={(e) => setForm((p) => ({ ...p, nickname: e.target.value }))}
+            placeholder="닉네임을 입력하세요"
           />
         </Field>
 
-        {/* 소개글 */}
-        <Field label="소개글">
-          <textarea
-            style={{ ...S.input, minHeight: 120, resize: "vertical" }}
-            value={form.bio}
-            onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
-            placeholder="강사 소개를 입력하세요. 수강생들에게 보여집니다."
-          />
-        </Field>
-
-        {/* 저장 버튼 */}
+        {/* 버튼 */}
         <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 8 }}>
-          <button onClick={() => goTo("instructor")}
+          <button onClick={() => goTo("my")}
             style={{ padding: "12px 24px", background: "none", border: "1.5px solid var(--sand)", borderRadius: 100, fontSize: 14, cursor: "pointer", color: "var(--mid)", fontFamily: "'DM Sans',sans-serif" }}>
             취소
           </button>

@@ -109,9 +109,11 @@ export default function CourseList({ goTo }: CourseListProps) {
                 <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 62, background: thumbGrad[THUMBS[i % 6]], overflow: "hidden" }}>
                   {c.thumbnail_url
                     ? <img src={c.thumbnail_url} alt={c.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    : EMOJIS[i % 6]
-                      ? EMOJIS[i % 6]
-                      : <img src="/soma-removebg-preview.png" alt="강사" style={{ height: "100%", width: "100%", objectFit: "cover", objectPosition: "top center" }} />
+                    : (c as any).instructor_avatar
+                      ? <img src={(c as any).instructor_avatar} alt={c.instructor_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : EMOJIS[i % 6]
+                        ? EMOJIS[i % 6]
+                        : <img src="/soma-removebg-preview.png" alt="강사" style={{ height: "100%", width: "100%", objectFit: "cover", objectPosition: "top center" }} />
                   }
                 </div>
                 <div style={{ padding: "18px 18px 22px" }}>
@@ -120,7 +122,15 @@ export default function CourseList({ goTo }: CourseListProps) {
                     {c.is_live === 1 && <span style={tagStyle("라이브")}>LIVE</span>}
                   </div>
                   <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 19, fontWeight: 400, marginBottom: 5 }}>{c.title}</div>
-                  <div style={{ fontSize: 12, color: "var(--mid)", marginBottom: 12 }}>👤 {c.instructor_name}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--mid)", marginBottom: 12 }}>
+                  <div style={{ width: 20, height: 20, borderRadius: "50%", overflow: "hidden", background: "var(--lsage)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {(c as any).instructor_avatar
+                      ? <img src={(c as any).instructor_avatar} alt={c.instructor_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <svg width="12" height="12" viewBox="0 0 24 24" fill="#8A9E7E"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                    }
+                  </div>
+                  {c.instructor_name}
+                </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 12, borderTop: "1px solid rgba(212,196,168,0.4)" }}>
                     <div style={{ fontSize: 12, color: "var(--mid)" }}>📹 {c.lecture_count}강 · {c.duration_weeks ? `${c.duration_weeks}주` : "상시"}</div>
                     <div style={{ display: "flex", gap: 4, fontSize: 13, fontWeight: 500 }}>

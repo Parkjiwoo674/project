@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import type { CourseDetail as ICourseDetail, Review, QnaQuestion, PageKey } from "@/types";
-import { courseApi, enrollmentApi, reviewApi, qnaApi } from "@/api";
+import { courseApi, enrollmentApi, reviewApi, qnaApi, instructorApi } from "@/api";
 import Footer from "@/components/Footer";
 
 interface DetailProps {
@@ -18,7 +18,6 @@ function fmtSec(s: number): string {
 export default function CourseDetail({ goTo, courseId, loggedIn, userId }: DetailProps) {
   const [course, setCourse]           = useState<ICourseDetail | null>(null);
   const [loading, setLoading]         = useState(true);
-  const [enrolling, setEnrolling]     = useState(false);
   const [wishlisted, setWishlisted]   = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewPaused, setPreviewPaused] = useState(false);
@@ -67,7 +66,6 @@ export default function CourseDetail({ goTo, courseId, loggedIn, userId }: Detai
   const handleEnroll = async () => {
     if (!loggedIn) { if (window.confirm("로그인이 필요합니다. 이동할까요?")) goTo("auth"); return; }
     if (!course) return;
-    // 결제 페이지로 이동
     goTo("payment", course.id);
   };
 
@@ -199,14 +197,16 @@ export default function CourseDetail({ goTo, courseId, loggedIn, userId }: Detai
             </div>
             <div>
               <div style={{ fontSize: 14, color: "var(--cream)", fontWeight: 500 }}>{course.instructor_name}</div>
-              <div style={{ fontSize: 12, color: "rgba(245,240,232,0.4)" }}>RYT 500 · 경력 10년</div>
+              {/* ✅ 하드코딩 제거 → 실제 데이터 */}
+              <div style={{ fontSize: 12, color: "rgba(245,240,232,0.4)" }}>
+                {(course as any).instructor_certifications || ""}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Enroll Card */}
         <div style={S.enrollCard}>
-          {/* 썸네일 or 미리보기 */}
           {(() => {
             const firstVideo = Object.values(course.curriculum).flat()[0]?.video_url;
             const hasPreview = !!firstVideo;
@@ -231,8 +231,8 @@ export default function CourseDetail({ goTo, courseId, loggedIn, userId }: Detai
             <div style={{ fontSize: 11, color: "var(--mid)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 5 }}>수강료</div>
             <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 44, fontWeight: 300, marginBottom: 4 }}>₩{course.price.toLocaleString()}</div>
             <div style={{ fontSize: 12, color: "var(--mid)", marginBottom: 20 }}>평생 소장 · 무제한 반복 수강</div>
-            <button style={{ ...S.ecBtn, opacity: course.isEnrolled ? 0.6 : 1 }} onClick={handleEnroll} disabled={enrolling || course.isEnrolled}>
-              {course.isEnrolled ? "✅ 수강 중" : enrolling ? "처리 중..." : "지금 수강 신청"}
+            <button style={{ ...S.ecBtn, opacity: course.isEnrolled ? 0.6 : 1 }} onClick={handleEnroll} disabled={course.isEnrolled}>
+              {course.isEnrolled ? "✅ 수강 중" : "지금 수강 신청"}
             </button>
             <button style={S.ecBtnOl} onClick={handleWishlist}>
               {wishlisted ? "❤️ 찜 완료" : "🤍 찜하기"}
@@ -293,7 +293,6 @@ export default function CourseDetail({ goTo, courseId, loggedIn, userId }: Detai
               </div>
             </div>
 
-            {/* 후기 작성 폼 */}
             {loggedIn && course.isEnrolled && (
               <div style={{ background: "var(--lsage)", borderRadius: 14, padding: 20, marginBottom: 20 }}>
                 <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 12 }}>후기 작성</div>
@@ -322,8 +321,11 @@ export default function CourseDetail({ goTo, courseId, loggedIn, userId }: Detai
               <div key={r.id} style={{ background: "var(--cream)", borderRadius: 14, padding: 20, marginBottom: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 9 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#D9D9D9", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="#9E9E9E"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                    <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#D9D9D9", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {r.reviewer_avatar
+                        ? <img src={r.reviewer_avatar} alt={r.reviewer_nickname} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        : <svg width="18" height="18" viewBox="0 0 24 24" fill="#9E9E9E"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                      }
                     </div>
                     <div style={{ fontWeight: 500, fontSize: 14 }}>{r.reviewer_nickname}</div>
                   </div>
@@ -408,7 +410,8 @@ export default function CourseDetail({ goTo, courseId, loggedIn, userId }: Detai
           <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 400, marginBottom: 16, paddingBottom: 13, borderBottom: "1px solid var(--sand)" }}>
             강사의 다른 강의
           </div>
-          <RelatedCourses courseId={courseId} goTo={goTo} />
+          {/* ✅ instructor_id 전달 */}
+          <RelatedCourses courseId={courseId} instructorId={course.instructor_id} goTo={goTo} />
         </div>
       </div>
 
@@ -426,13 +429,22 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function RelatedCourses({ courseId, goTo }: { courseId: number; goTo: (p: PageKey, id?: number) => void }) {
+// ✅ instructorId prop 추가, 같은 강사 강의만 표시
+function RelatedCourses({ courseId, instructorId, goTo }: {
+  courseId:     number;
+  instructorId: number | undefined;
+  goTo:         (p: PageKey, id?: number) => void;
+}) {
   const [related, setRelated] = useState<import("@/types").Course[]>([]);
+
   useEffect(() => {
-    courseApi.list({ limit: 5 }).then((res) => {
-      setRelated(res.data.filter((c) => c.id !== courseId).slice(0, 4));
+    if (!instructorId) return;
+    instructorApi.detail(instructorId).then((res) => {
+      if (res.data) {
+        setRelated(res.data.courses.filter((c) => c.id !== courseId).slice(0, 4));
+      }
     }).catch(() => {});
-  }, [courseId]);
+  }, [courseId, instructorId]);
 
   const GRADS = [
     "linear-gradient(135deg,#D4E8D4,#A8C8A0)",
@@ -440,6 +452,10 @@ function RelatedCourses({ courseId, goTo }: { courseId: number; goTo: (p: PageKe
     "linear-gradient(135deg,#D4D8E8,#A0A8C8)",
     "linear-gradient(135deg,#F5E6D4,#E8C8A0)",
   ];
+
+  if (related.length === 0) return (
+    <div style={{ fontSize: 13, color: "var(--mid)", paddingTop: 8 }}>다른 강의가 없어요.</div>
+  );
 
   return (
     <>

@@ -11,6 +11,8 @@ import Player             from "@/pages/Player";
 import WishlistPage       from "@/pages/WishlistPage";
 import InstructorDashboard from "@/pages/InstructorDashboard";
 import InstructorProfile  from "@/pages/InstructorProfile";
+import StudentProfile     from "@/pages/StudentProfile";
+import AdminDashboard     from "@/pages/AdminDashboard";
 import PaymentPage        from "@/pages/PaymentPage";
 import PaymentResult      from "@/pages/PaymentResult";
 
@@ -38,12 +40,10 @@ const GLOBAL_CSS = `
 `;
 
 export default function App() {
-  // URL 파라미터에서 초기 페이지/courseId 읽기 (Toss 결제 리다이렉트 처리)
   const getInitialState = () => {
     const params = new URLSearchParams(window.location.search);
     const p = params.get("page") as PageKey | null;
     const id = params.get("courseId");
-    // Toss 성공 리다이렉트: paymentKey가 있으면 무조건 success
     const hasPaymentKey = params.has("paymentKey");
     if (hasPaymentKey && id) return { page: "payment-success" as PageKey, courseId: Number(id) };
     if (p && id) return { page: p, courseId: Number(id) };
@@ -79,7 +79,9 @@ export default function App() {
       {page === "player"          && <Player               goTo={goTo} courseId={courseId} />}
       {page === "wishlist"        && <WishlistPage         goTo={goTo} />}
       {page === "instructor"      && <InstructorDashboard  goTo={goTo} />}
-      {page === "instructor-profile" && <InstructorProfile goTo={goTo} />}
+      {page === "instructor-profile" && <InstructorProfile goTo={goTo} onUpdate={auth.updateUser} />}
+      {page === "student-profile"    && <StudentProfile    goTo={goTo} onUpdate={auth.updateUser} />}
+      {page === "admin"           && <AdminDashboard       goTo={goTo} />}
       {page === "payment"         && <PaymentPage          goTo={goTo} courseId={courseId} user={auth.user} />}
       {page === "payment-success" && <PaymentResult        goTo={goTo} courseId={courseId} success={true} />}
       {page === "payment-fail"    && <PaymentResult        goTo={goTo} courseId={courseId} success={false} />}

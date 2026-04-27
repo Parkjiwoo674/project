@@ -1,10 +1,11 @@
 // ── 사용자 ────────────────────────────────────────────────────
 export interface User {
-  id:       number;
-  name:     string;
-  nickname: string;
-  email:    string;
-  role?:    "user" | "instructor" | "admin";
+  id:         number;
+  name:       string;
+  nickname:   string;
+  email:      string;
+  role?:      "user" | "instructor" | "admin";
+  avatar_url?: string | null;
 }
 
 // ── 강의 ──────────────────────────────────────────────────────
@@ -38,11 +39,12 @@ export interface Lecture {
 }
 
 export interface Review {
-  id:                number;
+  id: number;
   reviewer_nickname: string;
-  rating:            number;
-  content:           string;
-  created_at:        string;
+  reviewer_avatar?: string | null;
+  rating: number;
+  content: string;
+  created_at: string;
 }
 
 export interface QnaAnswer {
@@ -118,4 +120,4 @@ export interface PaginatedResponse<T> {
 }
 
 // ── 페이지 라우터용 ────────────────────────────────────────────
-export type PageKey = "home" | "courses" | "auth" | "detail" | "my" | "player" | "wishlist" | "instructor" | "instructor-profile" | "payment" | "payment-success" | "payment-fail";
+export type PageKey = "home" | "courses" | "auth" | "detail" | "my" | "player" | "wishlist" | "instructor" | "instructor-profile" | "student-profile" | "admin" | "payment" | "payment-success" | "payment-fail";

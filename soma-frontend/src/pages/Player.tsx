@@ -9,19 +9,15 @@ interface PlayerProps {
 
 const DEFAULT_VIDEO = "0Ad4j-qlG04";
 
-const saveTime = (lecId: number, sec: number) => {
-  localStorage.setItem(`soma_lec_${lecId}`, String(Math.floor(sec)));
-  progressApi.save(lecId, Math.floor(sec)).catch(() => {});
-};
-const loadTime = (lecId: number): number =>
-  Number(localStorage.getItem(`soma_lec_${lecId}`) ?? 0);
+function loadTime(lecId: number): number {
+  return Number(localStorage.getItem(`soma_lec_${lecId}`) ?? 0);
+}
 
 function fmtSec(s: number) {
   const m = Math.floor(s / 60);
   return `${m}:${String(s % 60).padStart(2, "0")}`;
 }
 
-// lecture의 video_url 또는 fallback
 function getVideoId(lec: Lecture): string {
   if (lec.video_url) return lec.video_url;
   return DEFAULT_VIDEO;
@@ -37,14 +33,34 @@ export default function Player({ goTo, courseId }: PlayerProps) {
   const currentTimeRef            = useRef<number>(0);
   const activeLecIdRef            = useRef<number>(0);
   const playerRef                 = useRef<ReturnType<typeof setInterval> | null>(null);
+  const completedRef              = useRef<Set<number>>(new Set()); // ✅ 추가
+
+  // ✅ completed 상태 바뀔 때 ref 동기화
+  useEffect(() => {
+    completedRef.current = completed;
+  }, [completed]);
+
+  // ✅ saveTime: 완료된 강의는 is_completed = true 유지
+  const saveTime = (lecId: number, sec: number) => {
+    localStorage.setItem(`soma_lec_${lecId}`, String(Math.floor(sec)));
+    const isCompleted = completedRef.current.has(lecId);
+    progressApi.save(lecId, Math.floor(sec), isCompleted).catch(() => {});
+  };
 
   useEffect(() => {
-    // 백엔드 진도 불러와서 localStorage 동기화
+    // ✅ 백엔드 진도 불러와서 완료 목록 + localStorage 동기화
     progressApi.myProgress().then((res) => {
-      res.data?.forEach((p) => {
-        if (p.watched_sec > 0)
-          localStorage.setItem(`soma_lec_${p.lecture_id}`, String(p.watched_sec));
-      });
+      if (res.data) {
+        const completedIds = new Set(
+          res.data.filter((p) => p.is_completed).map((p) => p.lecture_id)
+        );
+        setCompleted(completedIds);
+        completedRef.current = completedIds;
+        res.data.forEach((p) => {
+          if (p.watched_sec > 0)
+            localStorage.setItem(`soma_lec_${p.lecture_id}`, String(p.watched_sec));
+        });
+      }
     }).catch(() => {});
 
     courseApi.detail(courseId).then((res) => {
@@ -62,7 +78,6 @@ export default function Player({ goTo, courseId }: PlayerProps) {
       try {
         const data = JSON.parse(e.data);
         if (data.event === "onReady") {
-          // 준비되면 1초마다 getCurrentTime 요청
           if (playerRef.current) clearInterval(playerRef.current);
           playerRef.current = setInterval(() => {
             const iframe = document.querySelector("iframe[data-player]") as HTMLIFrameElement;
@@ -100,7 +115,7 @@ export default function Player({ goTo, courseId }: PlayerProps) {
     currentTimeRef.current = 0;
     setActiveLec(lec);
     setStartSec(loadTime(lec.id));
-    setVideoKey((k) => k + 1); // iframe 강제 교체
+    setVideoKey((k) => k + 1);
   };
 
   const allLectures = course ? Object.values(course.curriculum).flat() as Lecture[] : [];
@@ -111,10 +126,12 @@ export default function Player({ goTo, courseId }: PlayerProps) {
 
   const markComplete = () => {
     if (!activeLec) return;
-    setCompleted((prev) => new Set([...prev, activeLec.id]));
-    progressApi.save(activeLec.id, currentTimeRef.current, true).catch(() => {});
-    if (nextLec) selectLec(nextLec);
-  };
+  const newCompleted = new Set([...completed, activeLec.id]);
+  setCompleted(newCompleted);
+  completedRef.current = newCompleted;
+  progressApi.save(activeLec.id, currentTimeRef.current, true).catch(() => {});
+  if (nextLec) selectLec(nextLec);
+};
 
   if (!course || !activeLec) return (
     <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#1a1a1a", color: "rgba(255,255,255,0.5)" }}>

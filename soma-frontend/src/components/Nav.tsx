@@ -14,10 +14,11 @@ export default function Nav({ goTo, user, onLogout }: NavProps) {
       </span>
 
       <ul style={S.links}>
-        {user?.role !== "instructor" && <li><button style={S.link} onClick={() => goTo("courses")}>강의</button></li>}
+        {user?.role !== "instructor" && user?.role !== "admin" && <li><button style={S.link} onClick={() => goTo("courses")}>강의</button></li>}
         {user?.role === "instructor" && <li><button style={S.link} onClick={() => goTo("instructor")}>내 강의 관리</button></li>}
         {user?.role === "user" && <li><button style={S.link} onClick={() => goTo("my")}>내 수업</button></li>}
         {user?.role === "user" && <li><button style={S.link} onClick={() => goTo("wishlist")}>찜 목록</button></li>}
+        {user?.role === "admin" && <li><button style={S.link} onClick={() => goTo("admin")}>관리자 대시보드</button></li>}
         {!user && <li><button style={S.link} onClick={() => goTo("courses")}>강의</button></li>}
         {!user ? (
           <li>
@@ -26,14 +27,22 @@ export default function Nav({ goTo, user, onLogout }: NavProps) {
         ) : (
           <li style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 13, color: "var(--mid)", cursor: "pointer" }}
-              onClick={() => user.role === "instructor" ? goTo("instructor-profile") : undefined}>
+              onClick={() => user.role === "instructor" ? goTo("instructor-profile") : user.role === "user" ? goTo("student-profile") : undefined}>
               {user.nickname}님
             </span>
             {user.role === "instructor" && (
               <span style={{ fontSize: 10, background: "var(--terra)", color: "white", padding: "2px 8px", borderRadius: 100, fontWeight: 500, cursor: "pointer" }}
                 onClick={() => goTo("instructor-profile")}>강사</span>
             )}
-            <button style={S.avatar} onClick={onLogout} title="로그아웃">🌿</button>
+            {user.role === "admin" && (
+              <span style={{ fontSize: 10, background: "var(--deep)", color: "white", padding: "2px 8px", borderRadius: 100, fontWeight: 500 }}>관리자</span>
+            )}
+            <button style={S.avatar} onClick={onLogout} title="로그아웃">
+              {user.avatar_url
+                ? <img src={user.avatar_url} alt="프로필" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                : "🌿"
+              }
+            </button>
           </li>
         )}
       </ul>

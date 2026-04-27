@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { PageKey } from "@/types";
 import { paymentApi } from "@/api";
 
@@ -12,38 +12,40 @@ export default function PaymentResult({ goTo, courseId, success }: PaymentResult
   const [status, setStatus]   = useState<"loading" | "done" | "error">("loading");
   const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const pageParam = params.get("page");
+const confirmCalledRef = useRef(false);
 
-    // failUrl로 온 경우
-    if (!success || pageParam === "payment-fail") {
-      const msg = params.get("message") || "결제가 취소되었습니다.";
-      setStatus("error");
-      setMessage(msg);
+useEffect(() => {
+  if (confirmCalledRef.current) return;
+  confirmCalledRef.current = true;
+
+  const params = new URLSearchParams(window.location.search);
+  const pageParam = params.get("page");
+
+  if (!success || pageParam === "payment-fail") {
+    const msg = params.get("message") || "결제가 취소되었습니다.";
+    setStatus("error");
+    setMessage(msg);
+    window.history.replaceState({}, "", "/");
+    return;
+  }
+
+  const paymentKey = params.get("paymentKey");
+  const orderId    = params.get("orderId");
+  const amount     = params.get("amount");
+
+  if (!paymentKey || !orderId || !amount) {
+    setStatus("error");
+    setMessage("결제 정보가 올바르지 않습니다.");
+    return;
+  }
+
+  paymentApi.confirm({ paymentKey, orderId, amount: Number(amount) })
+    .then(() => {
+      setStatus("done");
       window.history.replaceState({}, "", "/");
-      return;
-    }
-
-    // successUrl로 온 경우 — Toss가 붙여준 파라미터 읽기
-    const paymentKey = params.get("paymentKey");
-    const orderId    = params.get("orderId");
-    const amount     = params.get("amount");
-
-    if (!paymentKey || !orderId || !amount) {
-      setStatus("error");
-      setMessage("결제 정보가 올바르지 않습니다.");
-      return;
-    }
-
-    paymentApi.confirm({ paymentKey, orderId, amount: Number(amount) })
-      .then(() => {
-        setStatus("done");
-        // URL 파라미터 제거 (새로고침 방지)
-        window.history.replaceState({}, "", "/");
-      })
-      .catch((e) => { setStatus("error"); setMessage((e as Error).message); });
-  }, [success]);
+    })
+    .catch((e) => { setStatus("error"); setMessage((e as Error).message); });
+}, [success]);
 
   return (
     <div style={{ paddingTop: 80, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--warm)" }}>

@@ -7,6 +7,16 @@ interface LandingProps {
   goTo: (page: PageKey, id?: number) => void;
 }
 
+interface BestReview {
+  id:                number;
+  rating:            number;
+  content:           string;
+  created_at:        string;
+  reviewer_nickname: string;
+  reviewer_avatar:   string | null;
+  course_title:      string;
+}
+
 const FEATURES = [
   ["01", "🌿", "맞춤형 커리큘럼", "초보자부터 중급자까지, 나의 수준에 맞는 클래스를 자동으로 추천합니다."],
   ["02", "🎥", "4K 고화질 강의", "세밀한 동작 하나하나를 놓치지 않도록 멀티 앵글 4K 카메라로 촬영합니다."],
@@ -20,8 +30,9 @@ const GRADS = [
 ];
 
 export default function Landing({ goTo }: LandingProps) {
-  const [topCourses, setTopCourses] = useState<Course[]>([]);
+  const [topCourses, setTopCourses]           = useState<Course[]>([]);
   const [featuredInstructor, setFeaturedInstructor] = useState<Instructor | null>(null);
+  const [bestReviews, setBestReviews]         = useState<BestReview[]>([]);
 
   useEffect(() => {
     courseApi.list({ limit: 3 }).then((res) => {
@@ -29,14 +40,19 @@ export default function Landing({ goTo }: LandingProps) {
       setTopCourses(sorted);
     }).catch(() => {});
 
-    // 강사 목록에서 랜덤 1명 선택
     instructorApi.list().then((res) => {
       const list = res.data ?? [];
       if (list.length > 0) {
-        const random = list[Math.floor(Math.random() * list.length)];
-        setFeaturedInstructor(random);
+        const top = list.sort((a, b) => b.student_count - a.student_count)[0];
+        setFeaturedInstructor(top);
       }
     }).catch(() => {});
+
+    // ✅ 베스트 후기 불러오기
+    fetch("/api/reviews/best")
+      .then((r) => r.json())
+      .then((res) => { if (res.data) setBestReviews(res.data); })
+      .catch(() => {});
   }, []);
 
   return (
@@ -75,7 +91,6 @@ export default function Landing({ goTo }: LandingProps) {
           <div style={S.heroEmoji}>
             <img src="/따뜻한 햇살 속 요가 클래스.png" alt="요가 클래스" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
           </div>
-
         </div>
       </section>
 
@@ -133,39 +148,80 @@ export default function Landing({ goTo }: LandingProps) {
 
       {/* ── Instructor ── */}
       {featuredInstructor && (
-      <section style={{ padding: "100px 80px", background: "var(--dark)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 100, alignItems: "center" }}>
-        <div style={{ position: "relative" }}>
-          <div style={{ width: "100%", aspectRatio: "3/4", background: "linear-gradient(160deg,var(--sage),var(--deep))", borderRadius: "180px 180px 20px 20px", overflow: "hidden", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-            {featuredInstructor.avatar_url
-              ? <img src={featuredInstructor.avatar_url} alt={featuredInstructor.name} style={{ width: "100%", objectFit: "cover", objectPosition: "top center" }} />
-              : <img src="/soma-removebg-preview.png" alt={featuredInstructor.name} style={{ width: "100%", objectFit: "cover", objectPosition: "top center" }} />
-            }
+        <section style={{ padding: "100px 80px", background: "var(--dark)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 100, alignItems: "center" }}>
+          <div style={{ position: "relative" }}>
+            <div style={{ width: "100%", aspectRatio: "3/4", background: "white", borderRadius: "180px 180px 20px 20px", overflow: "hidden", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+              {featuredInstructor.avatar_url
+                ? <img src={featuredInstructor.avatar_url} alt={featuredInstructor.name} style={{ width: "100%", objectFit: "cover", objectPosition: "top center" }} />
+                : <img src="/soma-removebg-preview.png" alt={featuredInstructor.name} style={{ width: "100%", objectFit: "cover", objectPosition: "top center" }} />
+              }
+            </div>
+            <div style={{ position: "absolute", bottom: -20, right: -20, width: 110, height: 110, background: "var(--terra)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Cormorant Garamond',serif", fontSize: 12, color: "white", textAlign: "center", lineHeight: 1.5 }}>
+              {featuredInstructor.course_count}개<br />강의
+            </div>
           </div>
-          <div style={{ position: "absolute", bottom: -20, right: -20, width: 110, height: 110, background: "var(--terra)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Cormorant Garamond',serif", fontSize: 12, color: "white", textAlign: "center", lineHeight: 1.5 }}>
-            {featuredInstructor.course_count}개<br />강의
+          <div>
+            <div style={{ ...S.sLabel, color: "var(--sage)" }}>강사 소개</div>
+            <h2 style={{ ...S.sTitle, color: "var(--cream)" }}>
+              {featuredInstructor.name} <em style={{ fontStyle: "italic", color: "var(--deep)" }}>선생님</em>
+            </h2>
+            <p style={{ fontFamily: "'Noto Serif KR',serif", fontSize: 14, lineHeight: 1.9, color: "rgba(245,240,232,0.65)", fontWeight: 300, margin: "22px 0 30px" }}>
+              {featuredInstructor.bio || "소마에서 활동 중인 강사입니다."}
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {featuredInstructor.certifications
+                ? (JSON.parse(featuredInstructor.certifications) as string[]).map((c) => (
+                    <span key={c} style={{ border: "1px solid rgba(138,158,126,0.35)", color: "var(--sage)", fontSize: 12, padding: "7px 14px", borderRadius: 100 }}>{c}</span>
+                  ))
+                : null
+              }
+              <span style={{ border: "1px solid rgba(138,158,126,0.35)", color: "var(--sage)", fontSize: 12, padding: "7px 14px", borderRadius: 100 }}>
+                수강생 {featuredInstructor.student_count.toLocaleString()}명
+              </span>
+            </div>
           </div>
-        </div>
-        <div>
-          <div style={{ ...S.sLabel, color: "var(--sage)" }}>강사 소개</div>
-          <h2 style={{ ...S.sTitle, color: "var(--cream)" }}>
-            {featuredInstructor.name} <em style={{ fontStyle: "italic", color: "var(--deep)" }}>선생님</em>
-          </h2>
-          <p style={{ fontFamily: "'Noto Serif KR',serif", fontSize: 14, lineHeight: 1.9, color: "rgba(245,240,232,0.65)", fontWeight: 300, margin: "22px 0 30px" }}>
-            {featuredInstructor.bio || "소마에서 활동 중인 강사입니다."}
-          </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {featuredInstructor.certifications
-              ? (JSON.parse(featuredInstructor.certifications) as string[]).map((c) => (
-                  <span key={c} style={{ border: "1px solid rgba(138,158,126,0.35)", color: "var(--sage)", fontSize: 12, padding: "7px 14px", borderRadius: 100 }}>{c}</span>
-                ))
-              : null
-            }
-            <span style={{ border: "1px solid rgba(138,158,126,0.35)", color: "var(--sage)", fontSize: 12, padding: "7px 14px", borderRadius: 100 }}>
-              수강생 {featuredInstructor.student_count.toLocaleString()}명
-            </span>
+        </section>
+      )}
+
+      {/* ── Best Reviews ── */}
+      {bestReviews.length > 0 && (
+        <section style={{ padding: "100px 80px", background: "var(--cream)" }}>
+          <div style={{ maxWidth: 540, marginBottom: 52 }}>
+            <div style={S.sLabel}>수강 후기</div>
+            <h2 style={S.sTitle}>수강생들의 <em style={{ fontStyle: "italic", color: "var(--deep)" }}>이야기</em></h2>
           </div>
-        </div>
-      </section>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20 }}>
+            {bestReviews.map((r) => (
+              <div key={r.id} style={S.testiCard}>
+                {/* 별점 */}
+                <div style={{ color: "var(--terra)", fontSize: 14, marginBottom: 14 }}>
+                  {"★".repeat(r.rating)}<span style={{ color: "var(--sand)" }}>{"★".repeat(5 - r.rating)}</span>
+                </div>
+                {/* 내용 */}
+                <p style={{ fontFamily: "'Noto Serif KR',serif", fontSize: 13, lineHeight: 1.85, color: "var(--mid)", fontWeight: 300, marginBottom: 20, minHeight: 60 }}>
+                  "{r.content}"
+                </p>
+                {/* 강의명 */}
+                <div style={{ fontSize: 11, color: "var(--sage)", letterSpacing: "0.06em", marginBottom: 16, padding: "5px 10px", background: "var(--lsage)", borderRadius: 100, display: "inline-block" }}>
+                  {r.course_title}
+                </div>
+                {/* 작성자 */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 16, borderTop: "1px solid var(--sand)" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", overflow: "hidden", background: "var(--lsage)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {r.reviewer_avatar
+                      ? <img src={r.reviewer_avatar} alt={r.reviewer_nickname} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <svg width="18" height="18" viewBox="0 0 24 24" fill="#8A9E7E"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                    }
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{r.reviewer_nickname}</div>
+                    <div style={{ fontSize: 11, color: "var(--mid)" }}>{r.created_at.slice(0, 10)}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       <Footer goTo={goTo} />
@@ -182,7 +238,7 @@ const S: Record<string, React.CSSProperties> = {
   heroRight: { position: "relative", overflow: "hidden" },
   heroBg:    { position: "absolute", inset: 0, background: "linear-gradient(135deg,var(--lsage),var(--sand))" },
   heroEmoji: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  floatCard: { position: "absolute", bottom: 80, left: -40, background: "white", borderRadius: 20, padding: "20px 28px", boxShadow: "0 20px 60px rgba(0,0,0,0.1)", minWidth: 220, zIndex: 3, animation: "float 4s ease-in-out infinite" },
+  floatCard: { position: "absolute", bottom: 80, left: -40, background: "white", borderRadius: 20, padding: "20px 28px", boxShadow: "0 20px 60px rgba(0,0,0,0.1)", minWidth: 220, zIndex: 3 },
   heroStats: { display: "flex", gap: 36, marginTop: 56, paddingTop: 36, borderTop: "1px solid rgba(138,158,126,0.2)" },
   statNum:   { fontFamily: "'Cormorant Garamond',serif", fontSize: 38, fontWeight: 300 },
   sLabel:    { fontSize: 11, letterSpacing: "0.3em", color: "var(--terra)", textTransform: "uppercase", fontWeight: 500, display: "flex", alignItems: "center", gap: 12, marginBottom: 18 },
@@ -191,5 +247,5 @@ const S: Record<string, React.CSSProperties> = {
   courseCard:{ borderRadius: 20, overflow: "hidden", background: "var(--cream)", cursor: "pointer" },
   btnDark:   { background: "var(--dark)", color: "var(--cream)", padding: "14px 30px", borderRadius: 100, fontSize: 14, fontWeight: 500, border: "none", cursor: "pointer", fontFamily: "'DM Sans',sans-serif" },
   btnGhost:  { background: "none", border: "none", fontSize: 14, cursor: "pointer", color: "var(--mid)", fontFamily: "'DM Sans',sans-serif" },
-  testiCard: { background: "white", borderRadius: 20, padding: "30px 26px" },
+  testiCard: { background: "white", borderRadius: 20, padding: "28px 24px" },
 };

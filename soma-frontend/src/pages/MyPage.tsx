@@ -7,7 +7,6 @@ interface MyPageProps {
   goTo: (page: PageKey, id?: number) => void;
 }
 
-const EMOJIS: (string | null)[] = [null, "🏋️‍♀️", "🌿", "🌅", "🧘‍♂️", "💧"];
 const GRADS  = [
   "linear-gradient(135deg,#D4E8D4,#A8C8A0)",
   "linear-gradient(135deg,#E8D4C4,#D4A88A)",
@@ -102,8 +101,17 @@ export default function MyPage({ goTo }: MyPageProps) {
                   <button style={S.playBtn} onClick={() => goTo("player", e.course_id)}>
                     {e.progress_rate === 0 ? "▶ 학습 시작" : e.progress_rate === 100 ? "✅ 완료" : "▶ 이어서 듣기"}
                   </button>
-                  <button style={S.cancelBtn} onClick={() => handleCancel(e.course_id, e.title)}>
-                    수강 취소
+                  <button
+                    style={{ ...S.cancelBtn, opacity: e.completed_lectures > 0 ? 0.4 : 1, cursor: e.completed_lectures > 0 ? "not-allowed" : "pointer" }}
+                    onClick={() => {
+                      if (e.completed_lectures > 0) {
+                        alert("완료한 강의가 있어 수강 취소가 불가합니다.");
+                        return;
+                      }
+                      handleCancel(e.course_id, e.title);
+                    }}
+                  >
+                    {e.completed_lectures > 0 ? "취소 불가" : "수강 취소"}
                   </button>
                 </div>
               </div>

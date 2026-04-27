@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { Lecture, QnaQuestion, PageKey } from "@/types";
-import { instructorCourseApi, uploadApi, qnaApi, type InstructorCourse, type LectureForm } from "@/api";
+import { instructorCourseApi, uploadApi, qnaApi, reviewApi, type InstructorCourse, type LectureForm } from "@/api";
 import Footer from "@/components/Footer";
 
 interface Props {
@@ -12,16 +12,12 @@ const LEVELS = ["입문", "중급", "심화"] as const;
 const EMPTY_COURSE = { title: "", description: "", level: "입문", price: "", is_live: false, duration_weeks: "", thumbnail_url: "" };
 const EMPTY_LECTURE: LectureForm = { week: 1, title: "", duration_sec: 0, is_preview: false, video_url: "" };
 
-// 유튜브 링크에서 ID 추출
 function extractYoutubeId(input: string): string {
   if (!input) return "";
-  // 이미 ID만 입력한 경우 (11자리 영숫자)
   if (/^[a-zA-Z0-9_-]{11}$/.test(input.trim())) return input.trim();
   try {
     const url = new URL(input);
-    // youtu.be/ID
     if (url.hostname === "youtu.be") return url.pathname.slice(1).split("?")[0];
-    // youtube.com/watch?v=ID
     return url.searchParams.get("v") ?? input;
   } catch {
     return input;
@@ -33,8 +29,9 @@ export default function InstructorDashboard({ goTo }: Props) {
   const [loading, setLoading]         = useState(true);
   const [selectedCourse, setSelectedCourse] = useState<InstructorCourse | null>(null);
   const [lectures, setLectures]       = useState<Lecture[]>([]);
-  const [activeTab, setActiveTab]     = useState<"curriculum" | "qna">("curriculum");
+  const [activeTab, setActiveTab]     = useState<"curriculum" | "qna" | "reviews">("curriculum");
   const [qnas, setQnas]               = useState<QnaQuestion[]>([]);
+  const [reviews, setReviews]         = useState<import("@/types").Review[]>([]);
   const [answerInputs, setAnswerInputs] = useState<Record<number, string>>({});
   const [openQna, setOpenQna]         = useState<number | null>(null);
 
@@ -66,6 +63,7 @@ export default function InstructorDashboard({ goTo }: Props) {
     setActiveTab("curriculum");
     loadLectures(c.id);
     qnaApi.list(c.id).then((res) => setQnas(res.data ?? [])).catch(() => {});
+    reviewApi.list(c.id).then((res) => setReviews(res.data ?? [])).catch(() => {});
   };
 
   const handleAnswerSubmit = async (questionId: number) => {
@@ -83,7 +81,8 @@ export default function InstructorDashboard({ goTo }: Props) {
     } catch (e) { alert((e as Error).message); }
   };
 
-  const handleThumbnailUpload = async (file: File) => {    setThumbnailUploading(true);
+  const handleThumbnailUpload = async (file: File) => {
+    setThumbnailUploading(true);
     try {
       const url = await uploadApi.thumbnail(file);
       setCourseForm((p) => ({ ...p, thumbnail_url: url }));
@@ -91,7 +90,6 @@ export default function InstructorDashboard({ goTo }: Props) {
     finally { setThumbnailUploading(false); }
   };
 
-  // ── 강의 저장 ──────────────────────────────────────────────
   const handleSaveCourse = async () => {
     const body = {
       ...courseForm,
@@ -144,7 +142,6 @@ export default function InstructorDashboard({ goTo }: Props) {
     } catch (e) { alert((e as Error).message); }
   };
 
-  // ── 강의 영상 저장 ─────────────────────────────────────────
   const handleSaveLecture = async () => {
     if (!selectedCourse) return;
     try {
@@ -250,7 +247,7 @@ export default function InstructorDashboard({ goTo }: Props) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <div>
                 <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 400 }}>{selectedCourse.title}</div>
-                <div style={{ fontSize: 12, color: "var(--mid)", marginTop: 4 }}>총 {lectures.length}강 · Q&A {qnas.length}개</div>
+                <div style={{ fontSize: 12, color: "var(--mid)", marginTop: 4 }}>총 {lectures.length}강 · Q&A {qnas.length}개 · 후기 {reviews.length}개</div>
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 {activeTab === "curriculum" && (
@@ -264,10 +261,10 @@ export default function InstructorDashboard({ goTo }: Props) {
 
             {/* 탭 */}
             <div style={{ display: "flex", borderBottom: "1px solid var(--sand)", marginBottom: 20, marginTop: 16 }}>
-              {(["curriculum", "qna"] as const).map((tab) => (
+              {(["curriculum", "qna", "reviews"] as const).map((tab) => (
                 <button key={tab} onClick={() => setActiveTab(tab)}
                   style={{ padding: "10px 20px", fontSize: 13, background: "none", border: "none", borderBottom: `2px solid ${activeTab === tab ? "var(--dark)" : "transparent"}`, color: activeTab === tab ? "var(--dark)" : "var(--mid)", cursor: "pointer", fontWeight: activeTab === tab ? 500 : 400, fontFamily: "'DM Sans',sans-serif", marginBottom: -1 }}>
-                  {tab === "curriculum" ? `커리큘럼 (${lectures.length})` : `Q&A (${qnas.length})`}
+                  {tab === "curriculum" ? `커리큘럼 (${lectures.length})` : tab === "qna" ? `Q&A (${qnas.length})` : `후기 (${reviews.length})`}
                 </button>
               ))}
             </div>
@@ -351,7 +348,6 @@ export default function InstructorDashboard({ goTo }: Props) {
                               <p style={{ fontSize: 13, color: "var(--mid)", lineHeight: 1.7 }}>{a.content}</p>
                             </div>
                           ))}
-                          {/* 답변 입력 */}
                           <div style={{ padding: "12px 18px", display: "flex", gap: 10 }}>
                             <input
                               value={answerInputs[q.id] ?? ""}
@@ -367,6 +363,37 @@ export default function InstructorDashboard({ goTo }: Props) {
                           </div>
                         </div>
                       )}
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+
+            {/* ✅ 후기 탭 */}
+            {activeTab === "reviews" && (
+              reviews.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "48px 0", color: "var(--mid)" }}>
+                  <div style={{ fontSize: 36, marginBottom: 12 }}>⭐</div>
+                  <div style={{ fontSize: 14 }}>아직 후기가 없어요.</div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {reviews.map((r) => (
+                    <div key={r.id} style={{ background: "var(--cream)", borderRadius: 14, padding: 20 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                        <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#D9D9D9", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          {(r as any).reviewer_avatar
+                            ? <img src={(r as any).reviewer_avatar} alt={r.reviewer_nickname} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            : <svg width="18" height="18" viewBox="0 0 24 24" fill="#9E9E9E"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                          }
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 500 }}>{r.reviewer_nickname}</div>
+                          <div style={{ fontSize: 11, color: "var(--mid)" }}>{r.created_at.slice(0, 10)}</div>
+                        </div>
+                        <div style={{ color: "var(--terra)", fontSize: 14 }}>{"★".repeat(r.rating)}<span style={{ color: "var(--sand)" }}>{"★".repeat(5 - r.rating)}</span></div>
+                      </div>
+                      <p style={{ fontFamily: "'Noto Serif KR',serif", fontSize: 13, lineHeight: 1.8, color: "var(--mid)", fontWeight: 300 }}>{r.content}</p>
                     </div>
                   ))}
                 </div>
