@@ -1,6 +1,5 @@
 node_modules/
-<<<<<<< HEAD
 dist/
-=======
->>>>>>> d4e62ce37bff82ac6349f6904bdedb86c5f84e96
 .env
+uploads/
+.vscode/
