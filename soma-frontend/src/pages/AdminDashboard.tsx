@@ -33,7 +33,7 @@ interface Stats {
   total_courses:     number;
   total_reviews:     number;
   total_revenue:     number;
-  monthly_revenue:   { month: string; revenue: number; count: number }[];
+  monthly_revenue:   { week: string; revenue: number; count: number }[];
 }
 
 const BASE = "/api";
@@ -41,6 +41,15 @@ const getToken = () => localStorage.getItem("soma_token");
 const authHeader = () => ({ Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" });
 
 type Tab = "stats" | "users" | "reviews";
+
+const STAT_CARDS = (stats: Stats) => [
+  { label: "총 회원",   value: stats.total_users,       unit: "명" },
+  { label: "강사",      value: stats.total_instructors, unit: "명" },
+  { label: "수강생",    value: stats.total_students,    unit: "명" },
+  { label: "공개 강의", value: stats.total_courses,     unit: "개" },
+  { label: "후기",      value: stats.total_reviews,     unit: "개" },
+  { label: "총 매출",   value: `₩${Number(stats.total_revenue).toLocaleString()}`, unit: "" },
+];
 
 export default function AdminDashboard({ goTo }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("stats");
@@ -96,7 +105,7 @@ export default function AdminDashboard({ goTo }: Props) {
       </div>
 
       {/* 탭 */}
-      <div style={{ background: "white", borderBottom: "1px solid var(--sand)", padding: "0 80px", display: "flex", gap: 0, position: "sticky", top: 76, zIndex: 50 }}>
+      <div style={{ background: "white", borderBottom: "1px solid var(--sand)", padding: "0 80px", display: "flex", position: "sticky", top: 76, zIndex: 50 }}>
         {TABS.map(([t, label]) => (
           <button key={t} onClick={() => { setActiveTab(t); setSearch(""); }}
             style={{ padding: "16px 24px", fontSize: 14, background: "none", border: "none", borderBottom: `2px solid ${activeTab === t ? "var(--dark)" : "transparent"}`, color: activeTab === t ? "var(--dark)" : "var(--mid)", cursor: "pointer", fontWeight: activeTab === t ? 500 : 400, fontFamily: "'DM Sans',sans-serif", marginBottom: -1 }}>
@@ -115,40 +124,75 @@ export default function AdminDashboard({ goTo }: Props) {
               <div>
                 {/* 요약 카드 */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 40 }}>
-                  {[
-                    ["총 회원",    stats.total_users,       "명"],
-                    ["강사",       stats.total_instructors, "명"],
-                    ["수강생",     stats.total_students,    "명"],
-                    ["공개 강의",  stats.total_courses,     "개"],
-                    ["후기",       stats.total_reviews,     "개"],
-                    ["총 매출",    `₩${Number(stats.total_revenue).toLocaleString()}`, ""],
-                  ].map(([label, val, unit]) => (
-                    <div key={String(label)} style={{ background: "white", borderRadius: 16, padding: "20px 24px", border: "1px solid var(--sand)" }}>
-                      <div style={{ fontSize: 11, color: "var(--mid)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>{label}</div>
-                      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 300 }}>
-                        {val}<span style={{ fontSize: 16, marginLeft: 4, color: "var(--mid)" }}>{unit}</span>
+                  {STAT_CARDS(stats).map(({ label, value, unit }, idx) => (
+                    <div key={label} style={{
+                      background: "white",
+                      borderRadius: 16,
+                      padding: "24px 28px",
+                      border: "1px solid var(--sand)",
+                    }}>
+                      <div style={{ fontSize: 11, color: "var(--mid)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>{label}</div>
+                      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 38, fontWeight: 300, color: "var(--dark)" }}>
+                        {value}<span style={{ fontSize: 16, marginLeft: 4, color: "var(--mid)", fontFamily: "'DM Sans',sans-serif" }}>{unit}</span>
                       </div>
+                      {/* ✅ 총 매출 카드만 하단 포인트 */}
+                      {idx === 5 && (
+                        <div style={{ marginTop: 12, height: 2, background: "var(--sage)", borderRadius: 2 }} />
+                      )}
                     </div>
                   ))}
                 </div>
 
-                {/* 월별 매출 */}
+                {/* 주간 매출 그래프 */}
                 {stats.monthly_revenue.length > 0 && (
-                  <div style={{ background: "white", borderRadius: 16, padding: "28px 32px", border: "1px solid var(--sand)" }}>
-                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 400, marginBottom: 24 }}>월별 매출</div>
-                    <div style={{ display: "flex", gap: 12, alignItems: "flex-end", height: 160 }}>
+                  <div style={{ background: "white", borderRadius: 16, padding: "32px 36px", border: "1px solid var(--sand)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+                      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 400 }}>주간 매출</div>
+                      <div style={{ fontSize: 12, color: "var(--mid)" }}>최근 4주</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 20, alignItems: "flex-end", height: 200, paddingBottom: 8, borderBottom: "1px solid var(--sand)" }}>
                       {stats.monthly_revenue.map((m) => {
-                        const max = Math.max(...stats.monthly_revenue.map((x) => x.revenue));
-                        const h   = max > 0 ? Math.round((m.revenue / max) * 120) : 0;
+                        const max = Math.max(...stats.monthly_revenue.map((x) => Number(x.revenue)));
+                        const h   = max > 0 ? Math.round((Number(m.revenue) / max) * 150) : 0;
                         return (
-                          <div key={m.month} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                            <div style={{ fontSize: 11, color: "var(--mid)" }}>₩{(m.revenue / 10000).toFixed(0)}만</div>
-                            <div style={{ width: "100%", height: h, background: "var(--terra)", borderRadius: "6px 6px 0 0", minHeight: 4 }} />
-                            <div style={{ fontSize: 11, color: "var(--mid)" }}>{m.month.slice(5)}월</div>
+                          <div key={m.week} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                            <div style={{ fontSize: 12, color: "var(--mid)" }}>
+                              ₩{(Number(m.revenue) / 10000).toFixed(0)}만
+                            </div>
+                            <div style={{ position: "relative", width: "100%", display: "flex", justifyContent: "center" }}>
+                              {/* ✅ 단색 크림/세이지 계열, 주황 없음 */}
+                              <div style={{
+                                width: "55%",
+                                height: Math.max(h, 4),
+                                background: "var(--sage)",
+                                borderRadius: "6px 6px 0 0",
+                                opacity: 0.75,
+                              }} />
+                            </div>
                           </div>
                         );
                       })}
                     </div>
+                    <div style={{ display: "flex", gap: 20, marginTop: 10 }}>
+                      {stats.monthly_revenue.map((m, i) => (
+                        <div key={m.week} style={{ flex: 1, textAlign: "center", fontSize: 12, color: "var(--mid)" }}>
+                          {i + 1}주차
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: 20, marginTop: 4 }}>
+                      {stats.monthly_revenue.map((m) => (
+                        <div key={m.week} style={{ flex: 1, textAlign: "center", fontSize: 11, color: "var(--mid)" }}>
+                          {m.count}건
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {stats.monthly_revenue.length === 0 && (
+                  <div style={{ background: "white", borderRadius: 16, padding: "48px", border: "1px solid var(--sand)", textAlign: "center", color: "var(--mid)", fontSize: 14 }}>
+                    아직 매출 데이터가 없어요.
                   </div>
                 )}
               </div>
@@ -222,7 +266,7 @@ export default function AdminDashboard({ goTo }: Props) {
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                           <span style={{ fontWeight: 500, fontSize: 14 }}>{r.reviewer_nickname}</span>
-                          <span style={{ color: "var(--terra)", fontSize: 12 }}>{"★".repeat(r.rating)}</span>
+                          <span style={{ color: "var(--terra)", fontSize: 12 }}>{"★".repeat(r.rating)}<span style={{ color: "var(--sand)" }}>{"★".repeat(5 - r.rating)}</span></span>
                           <span style={{ fontSize: 11, color: "var(--sage)", background: "var(--lsage)", padding: "2px 8px", borderRadius: 100 }}>{r.course_title}</span>
                           <span style={{ fontSize: 11, color: "var(--mid)", marginLeft: "auto" }}>{r.created_at.slice(0, 10)}</span>
                         </div>

@@ -63,7 +63,10 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    if (window.confirm("로그아웃 하시겠어요?")) auth.logout();
+    if (window.confirm("로그아웃 하시겠어요?")) {
+      auth.logout();
+      goTo("home");
+    }
   };
 
   return (
@@ -75,7 +78,7 @@ export default function App() {
       {page === "courses"         && <CourseList           goTo={goTo} />}
       {page === "auth"            && <Auth                 goTo={goTo} auth={auth} />}
       {page === "detail"          && <CourseDetail         goTo={goTo} courseId={courseId} loggedIn={!!auth.user} userId={auth.user?.id} />}
-      {page === "my"              && <MyPage               goTo={goTo} />}
+      {page === "my"              && <MyPage               goTo={goTo} onUpdate={auth.updateUser} />}
       {page === "player"          && <Player               goTo={goTo} courseId={courseId} />}
       {page === "wishlist"        && <WishlistPage         goTo={goTo} />}
       {page === "instructor"      && <InstructorDashboard  goTo={goTo} />}

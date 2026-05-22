@@ -351,3 +351,25 @@ export const paymentApi = {
       >
     >("/payment"),
 };
+
+// ── Notifications ─────────────────────────────────────────────
+export interface Notification {
+  id: number;
+  type: "course_deleted" | "refund" | "qna_answer" | "announcement";
+  title: string;
+  message: string;
+  link: string | null;
+  is_read: 0 | 1;
+  created_at: string;
+}
+
+export const notificationApi = {
+  list: () =>
+    request<ApiResponse<Notification[]> & { unreadCount: number }>("/notifications"),
+
+  markAsRead: (id: number) =>
+    request<ApiResponse<null>>(`/notifications/${id}/read`, { method: "PATCH" }),
+
+  markAllAsRead: () =>
+    request<ApiResponse<null>>("/notifications/read-all", { method: "PATCH" }),
+};

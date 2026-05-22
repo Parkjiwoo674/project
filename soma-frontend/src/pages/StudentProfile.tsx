@@ -56,7 +56,9 @@ export default function StudentProfile({ goTo, onUpdate }: Props) {
   };
 
   if (loading) return (
-    <div style={{ paddingTop: 80, textAlign: "center", padding: 120, color: "var(--mid)" }}>불러오는 중...</div>
+    <div style={{ paddingTop: 80, paddingRight: 120, paddingBottom: 120, paddingLeft: 120, textAlign: "center", color: "var(--mid)" }}>
+      불러오는 중...
+    </div>
   );
 
   return (

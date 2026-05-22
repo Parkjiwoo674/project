@@ -42,6 +42,9 @@ export default function Player({ goTo, courseId }: PlayerProps) {
 
   // ✅ saveTime: 완료된 강의는 is_completed = true 유지
   const saveTime = (lecId: number, sec: number) => {
+    // ✅ 유효하지 않은 lecture_id는 저장하지 않음
+    if (!lecId || lecId === 0) return;
+    
     localStorage.setItem(`soma_lec_${lecId}`, String(Math.floor(sec)));
     const isCompleted = completedRef.current.has(lecId);
     progressApi.save(lecId, Math.floor(sec), isCompleted).catch(() => {});
@@ -60,16 +63,35 @@ export default function Player({ goTo, courseId }: PlayerProps) {
           if (p.watched_sec > 0)
             localStorage.setItem(`soma_lec_${p.lecture_id}`, String(p.watched_sec));
         });
-      }
-    }).catch(() => {});
 
-    courseApi.detail(courseId).then((res) => {
-      if (res.data) {
-        setCourse(res.data);
-        const first = Object.values(res.data.curriculum)[0] as Lecture[];
-        if (first?.length) selectLec(first[0]);
+        // ✅ 강의 상세 불러온 후 첫 번째 미완료 강의 선택
+        courseApi.detail(courseId).then((courseRes) => {
+          if (courseRes.data) {
+            setCourse(courseRes.data);
+            const allLecs = Object.values(courseRes.data.curriculum).flat() as Lecture[];
+            
+            // ✅ 첫 번째 미완료 강의 찾기
+            const firstIncomplete = allLecs.find((lec) => !completedIds.has(lec.id));
+            
+            // 미완료 강의가 있으면 그것을, 없으면 첫 번째 강의 선택
+            if (firstIncomplete) {
+              selectLec(firstIncomplete);
+            } else if (allLecs.length > 0) {
+              selectLec(allLecs[0]);
+            }
+          }
+        }).catch(() => {});
       }
-    }).catch(() => {});
+    }).catch(() => {
+      // 진도 정보 없으면 그냥 첫 번째 강의 선택
+      courseApi.detail(courseId).then((res) => {
+        if (res.data) {
+          setCourse(res.data);
+          const first = Object.values(res.data.curriculum)[0] as Lecture[];
+          if (first?.length) selectLec(first[0]);
+        }
+      }).catch(() => {});
+    });
   }, [courseId]);
 
   // YouTube iframe API: onReady 후 1초마다 getCurrentTime 폴링
@@ -123,6 +145,9 @@ export default function Player({ goTo, courseId }: PlayerProps) {
   const prevLec     = currentIdx > 0 ? allLectures[currentIdx - 1] : null;
   const nextLec     = currentIdx < allLectures.length - 1 ? allLectures[currentIdx + 1] : null;
   const videoId     = activeLec ? getVideoId(activeLec) : DEFAULT_VIDEO;
+  
+  // ✅ 현재 강의의 완료된 강의 수만 계산
+  const completedInThisCourse = allLectures.filter(lec => completed.has(lec.id)).length;
 
   const markComplete = () => {
     if (!activeLec) return;
@@ -147,7 +172,7 @@ export default function Player({ goTo, courseId }: PlayerProps) {
         <div style={S.topTitle}>{course.title}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
-            {completed.size} / {allLectures.length}강 완료
+            {completedInThisCourse} / {allLectures.length}강 완료
           </span>
           <button style={S.sideToggle} onClick={() => setSideOpen((v) => !v)}>
             {sideOpen ? "◀ 목록 닫기" : "▶ 목록 열기"}

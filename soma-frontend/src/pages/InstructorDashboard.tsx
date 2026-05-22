@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import type { Lecture, QnaQuestion, PageKey } from "@/types";
 import { instructorCourseApi, uploadApi, qnaApi, reviewApi, type InstructorCourse, type LectureForm } from "@/api";
 import Footer from "@/components/Footer";
+import ModalComponent from "@/components/Modal";
+import { useModal } from "@/hooks/useModal";
 
 interface Props {
   goTo: (page: PageKey, id?: number) => void;
@@ -25,6 +27,7 @@ function extractYoutubeId(input: string): string {
 }
 
 export default function InstructorDashboard({ goTo }: Props) {
+  const modal = useModal();
   const [courses, setCourses]         = useState<InstructorCourse[]>([]);
   const [loading, setLoading]         = useState(true);
   const [selectedCourse, setSelectedCourse] = useState<InstructorCourse | null>(null);
@@ -121,15 +124,33 @@ export default function InstructorDashboard({ goTo }: Props) {
   const handleDeleteCourse = async (courseId: number) => {
     const target = courses.find((c) => c.id === courseId);
     const hasStudents = target && target.enrollment_count > 0;
-    const msg = hasStudents
-      ? `"${target?.title}" 강의를 삭제할까요?\n⚠️ 수강생 ${target?.enrollment_count}명의 수강 데이터도 함께 삭제됩니다.`
-      : `"${target?.title}" 강의를 삭제할까요?`;
-    if (!window.confirm(msg)) return;
+    
+    // ✅ 커스텀 모달 사용
+    const message = hasStudents
+      ? `"${target?.title}" 강의를 삭제할까요?\n\n⚠️ 수강생 ${target?.enrollment_count}명에게 자동으로 환불 처리됩니다.\n(결제한 수강생에게만 환불되며, 무료 수강생은 수강 취소됩니다)\n\n이 작업은 되돌릴 수 없습니다.`
+      : `"${target?.title}" 강의를 삭제할까요?\n\n이 작업은 되돌릴 수 없습니다.`;
+    
+    const confirmed = await modal.confirm(message, "warning", "강의 삭제");
+    if (!confirmed) return;
+    
     try {
-      await instructorCourseApi.delete(courseId);
+      const res = await instructorCourseApi.delete(courseId);
       setCourses((prev) => prev.filter((c) => c.id !== courseId));
       if (selectedCourse?.id === courseId) setSelectedCourse(null);
-    } catch (e) { alert((e as Error).message); }
+      
+      // ✅ 성공 알림
+      if (hasStudents) {
+        await modal.alert(
+          res.message || "강의가 삭제되고 모든 수강생에게 환불 처리되었습니다.",
+          "success",
+          "삭제 완료"
+        );
+      } else {
+        await modal.alert("강의가 삭제되었습니다.", "success", "삭제 완료");
+      }
+    } catch (e) {
+      await modal.alert((e as Error).message, "error", "오류");
+    }
   };
 
   const handleTogglePublish = async (courseId: number) => {
@@ -318,7 +339,7 @@ export default function InstructorDashboard({ goTo }: Props) {
 
             {/* Q&A 탭 */}
             {activeTab === "qna" && (
-              qnas.length === 0 ? (
+                qnas.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "48px 0", color: "var(--mid)" }}>
                   <div style={{ fontSize: 36, marginBottom: 12 }}>💬</div>
                   <div style={{ fontSize: 14 }}>아직 질문이 없어요.</div>
@@ -500,6 +521,19 @@ export default function InstructorDashboard({ goTo }: Props) {
       )}
 
       <Footer goTo={goTo} />
+
+      {/* ✅ 커스텀 모달 */}
+      <ModalComponent
+        isOpen={modal.isOpen}
+        onConfirm={modal.handleConfirm}
+        onCancel={modal.handleCancel}
+        title={modal.options.title}
+        message={modal.options.message || ""}
+        type={modal.options.type}
+        confirmText={modal.options.confirmText}
+        cancelText={modal.options.cancelText}
+        showCancel={modal.showCancel}
+      />
     </div>
   );
 }
